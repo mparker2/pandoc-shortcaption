@@ -11,25 +11,37 @@ logging.basicConfig(format=FORMAT, level=logging.ERROR)
 # \caption{Image Title}
 # \end{figure}
 
+
 def remove_prefix(text, prefix):
     if text.startswith(prefix):
         return text[len(prefix):]
     return text  # or whatever
 
+
 def text(c):
     if type(c) == list:
         return ' '.join(text(d) for d in c)
+    if c['t'] == 'Space':
+        return ' '
+    elif c['t'] == 'DoubleQuote':
+        return '"'
+    elif c['t'] == 'Strong':
+        return '\\textbf{' + text(c['c']) + '}'
+    elif c['t'] == 'Emph':
+        return '\\textit{' + text(c['c']) + '}'
     elif c['t'] == 'Str':
         return c['c'].replace('{','\\{').replace('}','\\}')
     elif c['t'] == 'RawInline':
         return c['c'][1]
     elif c['t'] == 'Math':
         return '$'+c['c'][1]+'$'
+    elif c['t'] == 'Code':
+        return '\\texttt{' + c['c'][1] + '}'
     else:
         return ' '.join(text(d) for d in c['c'])
 
-def shortcap(key, value, format, meta):
 
+def shortcap(key, value, format, meta):
     if key == 'Image' and format == "latex":
         #logging.debug(value)
 
@@ -37,13 +49,13 @@ def shortcap(key, value, format, meta):
         src = value[2][0]
         alt = remove_prefix(value[2][1], "fig:")
         attributes = value[0][2]
-        width = None
+        height = None
         if isinstance(attributes, list):
             for attr in attributes:
-                if attr[0].lower() == "width":
-                    width = float(attr[1][:-1])/100
+                if attr[0].lower() == "height":
+                    height = int(attr[1][:-2])
 
-        logging.debug(width)
+        logging.debug(height)
 
         if (alt != ""):
 
@@ -51,11 +63,11 @@ def shortcap(key, value, format, meta):
 
             raw = r'\begin{figure}[htbp]' + '\n'
             raw += r'\centering' + '\n'
-            if width is None:
-                raw += '\\includegraphics{{{}}}'.format(src, alt) + '\n'
+            if height is None:
+                raw += '\\includegraphics[width=\\textwidth,height=562pt,keepaspectratio]{{{}}}'.format(src, alt) + '\n'
             else:
-                raw += '\\includegraphics[width={}\\textwidth]{{{}}}'.format(
-                    width, src, alt) + '\n'
+                raw += '\\includegraphics[width=\\textwidth,height={}pt,keepaspectratio]{{{}}}'.format(
+                    int(round(height * 0.75)), src, alt) + '\n'
 
             raw += '\\caption[{}]{{{}}}'.format(alt, caption)
             if (label != ''):
