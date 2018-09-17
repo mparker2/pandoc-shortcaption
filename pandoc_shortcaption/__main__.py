@@ -2,6 +2,7 @@
 
 from pandocfilters import toJSONFilter, RawInline, RawBlock
 import logging
+import re
 FORMAT = "%(asctime)s %(levelname)-8s%(module)-10s %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.ERROR)
 
@@ -18,11 +19,22 @@ def remove_prefix(text, prefix):
     return text  # or whatever
 
 
+def alt_caption_emph_strong(text):
+    boldified = re.sub(r'\*\*(.*?)\*\*', r'\\textbf{\1}', text)
+    italified = re.sub(r'\*(.*?)\*', r'\\textit{\1}', boldified)
+    codified = re.sub(r'`(.*?)`', r'\\texttt{\1}', italified)
+    return codified
+
+
 def text(c):
     if type(c) == list:
         return ' '.join(text(d) for d in c)
     if c['t'] == 'Space':
         return ' '
+    elif c['t'] == 'BulletList':
+        return '\\begin{itemize}\n' + text(c['c']) + '\\end{itemize}'
+    elif c['t'] == 'Plain':
+        return '\\item' + text(c['c'])
     elif c['t'] == 'DoubleQuote':
         return '"'
     elif c['t'] == 'Strong':
@@ -44,10 +56,9 @@ def text(c):
 def shortcap(key, value, format, meta):
     if key == 'Image' and format == "latex":
         #logging.debug(value)
-
         label = value[0][0]
         src = value[2][0]
-        alt = remove_prefix(value[2][1], "fig:")
+        alt = alt_caption_emph_strong(remove_prefix(value[2][1], "fig:"))
         attributes = value[0][2]
         height = None
         if isinstance(attributes, list):
